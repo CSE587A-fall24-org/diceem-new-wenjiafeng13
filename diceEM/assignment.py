@@ -48,6 +48,9 @@ def diceEM(experiment_data: List[NDArray[np.int_]],  # pylint: disable=C0103
     iterations = 0
     # continue the E-M algorithm until the parameters converge to within the
     # desired accuracy or max_iterations has been reached. 
+    #prev_bag_of_dice = bag_of_dice
+    #prev_bag_of_dice = None
+
     while (((iterations == 0) or
             ((bag_of_dice - prev_bag_of_dice) > accuracy) and 
             (iterations < max_iterations))):
@@ -61,9 +64,9 @@ def diceEM(experiment_data: List[NDArray[np.int_]],  # pylint: disable=C0103
 
         # YOUR CODE HERE. SET REQUIRED VARIABLES BY CALLING e-step AND m-step.
         # E-step: compute the expected counts given current parameters        
-  
+        expected_counts_by_die = e_step(experiment_data, bag_of_dice)
         # M-step: update the parameters given the expected counts
-      
+        updated_bag_of_dice = m_step(expected_counts_by_die)
         prev_bag_of_dice: BagOfDice = bag_of_dice
         bag_of_dice = updated_bag_of_dice
 
@@ -94,6 +97,7 @@ def e_step(experiment_data: List[NDArray[np.int_]],
     :rtype: np.array of np.arrays of floats
     """
     # Initialize the expected counts object for each die
+    num_dice = len(bag_of_dice.dice)
     max_number_of_faces = max([len(die) for die in bag_of_dice.dice])
     # Initialize expected_counts to zero. It is a list of lists. The number
     # of inner lists is equal to the number of dice and the length of each
@@ -108,6 +112,28 @@ def e_step(experiment_data: List[NDArray[np.int_]],
     # counts for each type over all the draws.  
 
     # PUT YOUR CODE HERE, FOLLOWING THE DIRECTIONS ABOVE
+    # Iterate over draws
+    # Assuming the BagOfDice has an attribute like `counts` to represent how many of each die exist
+    priors = np.ones(num_dice) / num_dice
+    
+    # Iterate over each roll in the experiment data
+    for roll in experiment_data:
+        # Calculate the likelihood for each die given the roll
+        likelihoods = np.zeros(num_dice)
+        for die_idx, die in enumerate(bag_of_dice.dice):
+            likelihood = np.prod([die.face_probs[face] ** count for face, count in enumerate(roll)])
+            likelihoods[die_idx] = likelihood
+        
+        # Calculate the unnormalized posteriors by multiplying likelihoods by priors
+        unnormalized_posteriors = likelihoods * priors
+        
+        # Normalize to get the posterior probabilities
+        posteriors = unnormalized_posteriors / np.sum(unnormalized_posteriors)
+        
+        # Update the expected counts using the posterior probabilities
+        for die_idx in range(num_dice):
+            expected_counts[die_idx][:len(roll)] += posteriors[die_idx] * roll
+
 
     return expected_counts
 
@@ -133,11 +159,12 @@ def m_step(expected_counts_by_die: NDArray[np.float_]):
     """
     updated_type_1_frequency = np.sum(expected_counts_by_die[0])
     updated_type_2_frequency = np.sum(expected_counts_by_die[1])
-
+    
+    
     # REPLACE EACH NONE BELOW WITH YOUR CODE. 
-    updated_priors = None
-    updated_type_1_face_probs = None
-    updated_type_2_face_probs = None
+    updated_priors = np.array([updated_type_1_frequency, updated_type_2_frequency]) / (updated_type_1_frequency + updated_type_2_frequency)
+    updated_type_1_face_probs = expected_counts_by_die[0] / np.sum(expected_counts_by_die[0])
+    updated_type_2_face_probs = expected_counts_by_die[1] / np.sum(expected_counts_by_die[1])
     
     updated_bag_of_dice = BagOfDice(updated_priors,
                                     [Die(updated_type_1_face_probs),
