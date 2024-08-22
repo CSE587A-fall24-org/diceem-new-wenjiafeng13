@@ -48,8 +48,7 @@ def diceEM(experiment_data: List[NDArray[np.int_]],  # pylint: disable=C0103
     iterations = 0
     # continue the E-M algorithm until the parameters converge to within the
     # desired accuracy or max_iterations has been reached. 
-    #prev_bag_of_dice = bag_of_dice
-    #prev_bag_of_dice = None
+    
 
     while (((iterations == 0) or
             ((bag_of_dice - prev_bag_of_dice) > accuracy) and 
